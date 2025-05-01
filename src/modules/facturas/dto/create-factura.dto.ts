@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsNumber, IsOptional, ValidateNested } from 'class-validator';
-import { CreateFacturaDetalleDto } from './create-factura-detalle.dto';
+import { IsDateString, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateFacturaDto {
   @IsDateString()
@@ -15,9 +14,4 @@ export class CreateFacturaDto {
   @IsNumber()
   @Type(() => Number)
   facVendedor?: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => CreateFacturaDetalleDto)
-  detalles: CreateFacturaDetalleDto[];
-} 
+}

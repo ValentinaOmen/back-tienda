@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { IsNotEmpty, IsNumber, Min } from 'class-validator';
-import { FacturaDetalle } from '../../facturas/entity/factura-detalle.entity';
+import { FacturaDetalle } from '../../factura-detalles/entity/factura-detalle.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('productos')

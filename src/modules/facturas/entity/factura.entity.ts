@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColum
 import { IsNotEmpty, IsNumber, Min } from 'class-validator';
 import { Cliente } from '../../clientes/entity/cliente.entity';
 import { Vendedor } from '../../vendedores/entity/vendedor.entity';
-import { FacturaDetalle } from './factura-detalle.entity';
+import { FacturaDetalle } from '../../factura-detalles/entity/factura-detalle.entity';
 
 @Entity('facturas')
 export class Factura {

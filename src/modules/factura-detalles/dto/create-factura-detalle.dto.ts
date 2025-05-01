@@ -3,7 +3,7 @@ import { Type } from 'class-transformer';
 
 export class CreateFacturaDetalleDto {
   @IsNotEmpty({ message: 'El producto es obligatorio' })
-  @IsNumber({}, { message: 'El producto debe ser un ID válido' })
+  @IsNumber({}, { message: 'El producto debe ser un número' })
   @Type(() => Number)
   facProducto: number;
 
@@ -12,4 +12,4 @@ export class CreateFacturaDetalleDto {
   @Min(1, { message: 'La cantidad debe ser al menos 1' })
   @Type(() => Number)
   facCantidad: number;
-} 
+}

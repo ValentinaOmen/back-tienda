@@ -3,6 +3,7 @@ import { FacturasService } from './facturas.service';
 import { CreateFacturaDto } from './dto/create-factura.dto';
 import { Factura } from './entity/factura.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { FacturaWithDetallesDto } from './dto/factura-with-detalles.dto';
 
 @Controller('facturas')
 export class FacturasController {
@@ -10,20 +11,28 @@ export class FacturasController {
 
   @Post()
   create(@Body() createFacturaDto: CreateFacturaDto): Promise<Factura> {
-    return this.facturasService.create(createFacturaDto);
+    return this.facturasService.createSimple(createFacturaDto);
+  }
+
+  @Post('con-detalles')
+  createWithDetalles(@Body() facturaWithDetallesDto: FacturaWithDetallesDto): Promise<Factura> {
+    return this.facturasService.createWithDetalles(facturaWithDetallesDto);
   }
 
   @Post('crear')
   @UseGuards(JwtAuthGuard)
   createSecured(@Body() createFacturaDto: CreateFacturaDto): Promise<Factura> {
-    return this.facturasService.create(createFacturaDto);
+    return this.facturasService.createSimple(createFacturaDto);
+  }
+
+  @Post('crear-con-detalles')
+  @UseGuards(JwtAuthGuard)
+  createSecuredWithDetalles(@Body() facturaWithDetallesDto: FacturaWithDetallesDto): Promise<Factura> {
+    return this.facturasService.createWithDetalles(facturaWithDetallesDto);
   }
 
   @Get()
-  findAll(): Promise<Factura[]> {// Verificar si hay suficiente stock
-/*   if (producto.proCantidad < detalleDto.facCantidad) {
-    throw new BadRequestException(`No hay suficiente stock del producto ${producto.proDescripcion}`);
-  } */
+  findAll(): Promise<Factura[]> {
     return this.facturasService.findAll();
   }
 
@@ -43,7 +52,16 @@ export class FacturasController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateFacturaDto: CreateFacturaDto,
   ) {
-    return this.facturasService.update(id, updateFacturaDto);
+    return this.facturasService.updateSimple(id, updateFacturaDto);
+  }
+
+  @Patch('actualizar-con-detalles/:id')
+  @UseGuards(JwtAuthGuard)
+  updateWithDetalles(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() facturaWithDetallesDto: FacturaWithDetallesDto,
+  ) {
+    return this.facturasService.updateWithDetalles(id, facturaWithDetallesDto);
   }
 
   @Delete('eliminar/:id')
@@ -57,4 +75,4 @@ export class FacturasController {
   getFacturasByVendedor(@Param('id', ParseIntPipe) id: number) {
     return this.facturasService.getFacturasByVendedor(id);
   }
-} 
+}

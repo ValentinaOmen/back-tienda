@@ -1,6 +1,6 @@
-import { Entity, Column, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, PrimaryColumn, JoinColumn } from 'typeorm';
 import { IsNotEmpty, IsNumber, Min } from 'class-validator';
-import { Factura } from './factura.entity';
+import { Factura } from '../../facturas/entity/factura.entity';
 import { Producto } from '../../productos/entity/producto.entity';
 
 @Entity('facturadetalle')
@@ -19,10 +19,12 @@ export class FacturaDetalle {
   @ManyToOne(() => Factura, factura => factura.detalles, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'facNumero', referencedColumnName: 'facNumero' })
   factura: Factura;
 
   @ManyToOne(() => Producto, producto => producto.detalles, {
     onDelete: 'SET NULL',
   })
+  @JoinColumn({ name: 'facProducto', referencedColumnName: 'proCodigo' })
   producto: Producto;
 }

@@ -3,17 +3,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Factura } from './entity/factura.entity';
 import { CreateFacturaDto } from './dto/create-factura.dto';
-import { FacturaDetalle } from './entity/factura-detalle.entity';
+import { FacturaDetallesService } from '../factura-detalles/factura-detalles.service';
 import { ProductosService } from '../productos/productos.service';
+import { FacturaWithDetallesDto } from './dto/factura-with-detalles.dto';
 
 @Injectable()
 export class FacturasService {
   constructor(
     @InjectRepository(Factura)
     private facturaRepository: Repository<Factura>,
-    @InjectRepository(FacturaDetalle)
-    private facturaDetalleRepository: Repository<FacturaDetalle>,
     private dataSource: DataSource,
+    private facturaDetallesService: FacturaDetallesService,
     private productosService: ProductosService,
   ) {}
 
@@ -34,54 +34,48 @@ export class FacturasService {
     return factura;
   }
 
-  async create(createFacturaDto: CreateFacturaDto): Promise<Factura> {
-    // Usar transacción para garantizar la integridad de los datos
+  async createSimple(createFacturaDto: CreateFacturaDto): Promise<Factura> {
+    const factura = this.facturaRepository.create({
+      facFecha: new Date(createFacturaDto.facFecha),
+      facCliente: createFacturaDto.facCliente,
+      facVendedor: createFacturaDto.facVendedor,
+      facValorTotal: 0, // Valor inicial
+    });
+
+    return this.facturaRepository.save(factura);
+  }
+
+  async createWithDetalles(facturaWithDetallesDto: FacturaWithDetallesDto): Promise<Factura> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      // Crear la factura
       const factura = this.facturaRepository.create({
-        facFecha: new Date(createFacturaDto.facFecha),
-        facCliente: createFacturaDto.facCliente,
-        facVendedor: createFacturaDto.facVendedor,
+        facFecha: new Date(facturaWithDetallesDto.facFecha),
+        facCliente: facturaWithDetallesDto.facCliente,
+        facVendedor: facturaWithDetallesDto.facVendedor,
         facValorTotal: 0, // Lo calcularemos después
       });
 
-      // Guardar la factura para obtener el ID
       const savedFactura = await queryRunner.manager.save(factura);
 
       let valorTotal = 0;
 
-      // Crear y guardar los detalles
-      for (const detalleDto of createFacturaDto.detalles) {
-        // Obtener el producto para validar y calcular el valor
+      for (const detalleDto of facturaWithDetallesDto.detalles) {
         const producto = await this.productosService.findOne(detalleDto.facProducto);
 
-        // Verificar si hay suficiente stock
         if (producto.proCantidad < detalleDto.facCantidad) {
           throw new BadRequestException(`No hay suficiente stock del producto ${producto.proDescripcion}`);
         }
 
-        // Actualizar el stock
         await this.productosService.updateStock(producto.proCodigo, detalleDto.facCantidad);
 
-        // Crear el detalle
-        const detalle = this.facturaDetalleRepository.create({
-          facNumero: savedFactura.facNumero,
-          facProducto: detalleDto.facProducto,
-          facCantidad: detalleDto.facCantidad,
-        });
+        await this.facturaDetallesService.create(savedFactura.facNumero, detalleDto);
 
-        // Guardar el detalle
-        await queryRunner.manager.save(detalle);
-
-        // Sumar al valor total
         valorTotal += producto.proValor * detalleDto.facCantidad;
       }
 
-      // Actualizar el valor total de la factura
       savedFactura.facValorTotal = valorTotal;
       await queryRunner.manager.save(savedFactura);
 
@@ -95,67 +89,63 @@ export class FacturasService {
       await queryRunner.release();
     }
   }
-  
-  async update(id: number, createFacturaDto: CreateFacturaDto): Promise<Factura> {
-    // Verificar que la factura exista
+
+  async updateSimple(id: number, createFacturaDto: CreateFacturaDto): Promise<Factura> {
+    const factura = await this.facturaRepository.findOne({ where: { facNumero: id } });
+    if (!factura) {
+      throw new NotFoundException(`Factura con ID ${id} no encontrada`);
+    }
+    
+    factura.facFecha = new Date(createFacturaDto.facFecha);
+    factura.facCliente = createFacturaDto.facCliente as number;
+    factura.facVendedor = createFacturaDto.facVendedor as number;
+
+    return this.facturaRepository.save(factura);
+  }
+
+  async updateWithDetalles(id: number, facturaWithDetallesDto: FacturaWithDetallesDto): Promise<Factura> {
     await this.findOne(id);
+
+    await this.facturaDetallesService.removeAllByFacturaId(id);
+
+    const factura = await this.facturaRepository.findOne({ where: { facNumero: id } });
+    if (!factura) {
+      throw new NotFoundException(`Factura con ID ${id} no encontrada`);
+    }
     
-    // Primero eliminar la factura antigua y sus detalles
-    await this.remove(id);
-    
-    // Crear una nueva factura con los datos actualizados
-    const factura = this.facturaRepository.create({
-      facNumero: id, // Mantener el mismo número de factura
-      facFecha: new Date(createFacturaDto.facFecha),
-      facCliente: createFacturaDto.facCliente,
-      facVendedor: createFacturaDto.facVendedor,
-      facValorTotal: 0, // Lo calcularemos después
-    });
-    
-    // Usar transacción para garantizar la integridad de los datos
+    factura.facFecha = new Date(facturaWithDetallesDto.facFecha);
+    factura.facCliente = facturaWithDetallesDto.facCliente as number;
+    factura.facVendedor = facturaWithDetallesDto.facVendedor as number;
+    factura.facValorTotal = 0; // Lo calcularemos después
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
-    
+
     try {
-      // Guardar la factura
       const savedFactura = await queryRunner.manager.save(factura);
-      
+
       let valorTotal = 0;
-      
-      // Crear y guardar los detalles
-      for (const detalleDto of createFacturaDto.detalles) {
-        // Obtener el producto para validar y calcular el valor
+
+      for (const detalleDto of facturaWithDetallesDto.detalles) {
         const producto = await this.productosService.findOne(detalleDto.facProducto);
-        
-        // Verificar si hay suficiente stock
+
         if (producto.proCantidad < detalleDto.facCantidad) {
           throw new BadRequestException(`No hay suficiente stock del producto ${producto.proDescripcion}`);
         }
-        
-        // Actualizar el stock
+
         await this.productosService.updateStock(producto.proCodigo, detalleDto.facCantidad);
-        
-        // Crear el detalle
-        const detalle = this.facturaDetalleRepository.create({
-          facNumero: savedFactura.facNumero,
-          facProducto: detalleDto.facProducto,
-          facCantidad: detalleDto.facCantidad,
-        });
-        
-        // Guardar el detalle
-        await queryRunner.manager.save(detalle);
-        
-        // Sumar al valor total
+
+        await this.facturaDetallesService.create(savedFactura.facNumero, detalleDto);
+
         valorTotal += producto.proValor * detalleDto.facCantidad;
       }
-      
-      // Actualizar el valor total de la factura
+
       savedFactura.facValorTotal = valorTotal;
       await queryRunner.manager.save(savedFactura);
-      
+
       await queryRunner.commitTransaction();
-      
+
       return this.findOne(savedFactura.facNumero);
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -166,10 +156,14 @@ export class FacturasService {
   }
 
   async remove(id: number): Promise<void> {
-    const factura = await this.findOne(id);
-    await this.facturaRepository.remove(factura);
+    await this.facturaDetallesService.removeAllByFacturaId(id);
+
+    const factura = await this.facturaRepository.findOne({ where: { facNumero: id } });
+    if (factura) {
+      await this.facturaRepository.remove(factura);
+    }
   }
-  
+
   async getFacturasDetalladas(): Promise<any[]> {
     const query = `
       SELECT f.facNumero, f.facFecha, f.facValorTotal,
@@ -209,4 +203,4 @@ export class FacturasService {
     
     return this.facturaRepository.query(query, [vendedorId]);
   }
-} 
+}

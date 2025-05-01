@@ -7,6 +7,7 @@ import { ClientesModule } from './modules/clientes/clientes.module';
 import { VendedoresModule } from './modules/vendedores/vendedores.module';
 import { ProductosModule } from './modules/productos/productos.module';
 import { FacturasModule } from './modules/facturas/facturas.module';
+import { FacturaDetallesModule } from './modules/factura-detalles/factura-detalles.module';
 import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
@@ -25,13 +26,14 @@ import { AuthModule } from './modules/auth/auth.module';
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // En producción esto debería ser false
+        synchronize: true, // Activar temporalmente para crear las tablas
       }),
     }),
     ClientesModule,
     VendedoresModule,
     ProductosModule,
     FacturasModule,
+    FacturaDetallesModule,
     AuthModule,
   ],
   controllers: [AppController],
