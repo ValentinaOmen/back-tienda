@@ -6,6 +6,7 @@ import { Factura } from './entity/factura.entity';
 import { FacturaDetalle } from './entity/factura-detalle.entity';
 import { ProductosModule } from '../productos/productos.module';
 
+//nose que hacer 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Factura, FacturaDetalle]),
