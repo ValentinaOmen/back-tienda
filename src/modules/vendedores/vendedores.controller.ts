@@ -4,6 +4,10 @@ import { CreateVendedorDto } from './dto/create-vendedor.dto';
 import { UpdateVendedorDto } from './dto/update-vendedor.dto';
 import { Vendedor } from './entity/vendedor.entity';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UseGuards } from '@nestjs/common';
+
+@UseGuards(JwtAuthGuard)
 @Controller('vendedores')
 export class VendedoresController {
   constructor(private readonly vendedoresService: VendedoresService) {}

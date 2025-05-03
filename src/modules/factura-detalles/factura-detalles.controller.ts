@@ -4,6 +4,7 @@ import { CreateFacturaDetalleDto } from './dto/create-factura-detalle.dto';
 import { FacturaDetalle } from './entity/factura-detalle.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('factura-detalles')
 export class FacturaDetallesController {
   constructor(private readonly facturaDetallesService: FacturaDetallesService) {}
